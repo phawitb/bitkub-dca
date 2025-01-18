@@ -83,11 +83,14 @@ def order_thb_to_btc(API_KEY,API_SECRET,AMOUNT):
 
 
 DCA_COMPLETE = False
+
+print('Bitkub DCA Start!!!....')
+
 while True:
     # check time is 0700
     thailand_timezone = pytz.timezone('Asia/Bangkok')
     current_time_thailand = datetime.now(thailand_timezone)
-    if current_time_thailand.strftime('%H%M') == '0040' and not DCA_COMPLETE:
+    if current_time_thailand.strftime('%H%M') == '0700' and not DCA_COMPLETE:
         print("Start DCA",'-'*100)
 
 
@@ -120,7 +123,7 @@ while True:
         
         DCA_COMPLETE = True
 
-    if current_time_thailand.strftime('%H%M') == '0045':
+    if current_time_thailand.strftime('%H%M') == '0730':
         DCA_COMPLETE = False
 
     # else:
