@@ -1,0 +1,7 @@
+streamlit==1.24.1
+extra-streamlit-components==0.1.56
+folium==0.14.0
+streamlit-folium==0.13.0
+streamlit_js_eval==0.1.5
+pygsheets==2.0.6
+st-pages==0.4.4
