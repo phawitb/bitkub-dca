@@ -10,12 +10,12 @@ import pytz
 # ✅ Set page config FIRST before any other Streamlit call
 st.set_page_config(page_title="BitkubDca", page_icon="👋")
 
-# ✅ Check for rerun flag in query params
+# ✅ Handle rerun trigger using query_params
 if "rerun" in st.query_params:
-    st.query_params.clear()  # clear the flag
+    st.query_params.clear()
     st.rerun()
 
-# ✅ Hide Streamlit default UI
+# ✅ Hide default Streamlit UI
 hide_st_style = """
     <style>
     #MainMenu {visibility: hidden;}
@@ -44,23 +44,22 @@ if not person_id:
     login_username = tab1.text_input("Email :").lower()
     login_password = tab1.text_input("Password :", type="password")
 
-    if not isEmail(login_username):
-        tab1.text("not email format")
-    elif login_username not in users:
-        tab1.text("email not registered")
-
     if tab1.button('LOGIN'):
-        if login_username in users and verify_password(users[login_username], login_password):
-            tab1.text("Login successful")
+        if not isEmail(login_username):
+            tab1.error("Invalid email format")
+        elif login_username not in users:
+            tab1.error("Email not registered")
+        elif not verify_password(users[login_username], login_password):
+            tab1.error("Incorrect password")
+        else:
+            tab1.success("Login successful")
             cookie_manager.set(
                 'person_id',
                 login_username,
                 expires_at=datetime.datetime.now().astimezone(pytz.timezone('Asia/Bangkok')).replace(tzinfo=None).replace(year=datetime.datetime.now().year + 2, month=2, day=2)
             )
-            st.query_params = {"rerun": "1"}  # ✅ Modern rerun
+            st.query_params = {"rerun": "1"}
             st.stop()
-        else:
-            tab1.text("Incorrect password")
 
     # --- REGISTER ---
     if "sentOTP" not in st.session_state:
@@ -77,23 +76,24 @@ if not person_id:
         pass1 = tab2.text_input("Password : ", type="password")
         pass2 = tab2.text_input("Re-Password : ", type="password")
 
-        if not isEmail(email):
-            tab2.text('not email format')
-        elif email in users:
-            tab2.text('email already registered')
-        elif pass1 == pass2 and pass1:
-            if tab2.button("Send OTP"):
-                tab2.text('Sending OTP...')
+        if tab2.button("Send OTP"):
+            if not isEmail(email):
+                tab2.error("Invalid email format")
+            elif email in users:
+                tab2.error("Email already registered")
+            elif pass1 != pass2 or not pass1:
+                tab2.error("Passwords do not match or are empty")
+            else:
                 otp_sent = str(random.randint(1000, 9999))
                 st.session_state["randomotp"] = otp_sent
                 if sent_otp(email, otp_sent):
                     st.session_state["email"] = email
                     st.session_state["password"] = pass1
                     st.session_state["sentOTP"] = True
-                    st.query_params = {"rerun": "1"}  # ✅ Modern rerun
+                    st.query_params = {"rerun": "1"}
                     st.stop()
-        else:
-            tab2.text('Password mismatch')
+                else:
+                    tab2.error("Failed to send OTP")
     else:
         otp = tab2.text_input("OTP :")
         if tab2.button("Confirm OTP"):
@@ -105,7 +105,7 @@ if not person_id:
                 save_users("users.json", users)
                 tab2.success(f'Registration complete for {username}')
             else:
-                tab2.text('OTP mismatch')
+                tab2.error("OTP mismatch")
 
     # --- FORGOT PASSWORD ---
     if "stage_fg" not in st.session_state:
@@ -117,29 +117,29 @@ if not person_id:
         email = tab3.text_input("E-mail :").lower()
         if tab3.button('Send OTP'):
             if not isEmail(email):
-                tab3.text('not email format')
+                tab3.error("Invalid email format")
             elif email not in users:
-                tab3.text('email not registered')
+                tab3.error("Email not registered")
             else:
                 st.session_state["email"] = email
                 otp_sent = str(random.randint(1000, 9999))
                 st.session_state["randomotp"] = otp_sent
                 if sent_otp(email, otp_sent):
                     st.session_state["stage_fg"] = 1
-                    st.query_params = {"rerun": "1"}  # ✅ Modern rerun
+                    st.query_params = {"rerun": "1"}
                     st.stop()
                 else:
-                    tab3.text('Failed to send OTP')
+                    tab3.error("Failed to send OTP")
 
     elif st.session_state["stage_fg"] == 1:
         otp = tab3.text_input("OTP :")
         if tab3.button('Confirm OTP'):
             if otp == st.session_state["randomotp"]:
                 st.session_state["stage_fg"] = 2
-                st.query_params = {"rerun": "1"}  # ✅ Modern rerun
+                st.query_params = {"rerun": "1"}
                 st.stop()
             else:
-                tab3.text('Incorrect OTP')
+                tab3.error("Incorrect OTP")
 
     elif st.session_state["stage_fg"] == 2:
         new_password = tab3.text_input("New password :", type="password")
@@ -151,12 +151,12 @@ if not person_id:
                 username = st.session_state["email"]
                 users[username] = hash_password(new_password)
                 save_users("users.json", users)
-                tab3.success('Password reset successful!')
+                tab3.success("Password reset successful!")
             else:
-                tab3.text('Passwords must match')
+                tab3.error("Passwords do not match")
 
 else:
-    # LOGGED IN USER VIEW
+    # --- LOGGED-IN VIEW ---
     st.sidebar.success(person_id)
     LIST_MENUS = ["📈 My Profile", "🗃 Change Password", '🪙 Coins']
     tab1, tab2, tab3 = st.tabs(LIST_MENUS)
@@ -166,7 +166,7 @@ else:
     if tab1.button('Logout'):
         try:
             cookie_manager.delete('person_id')
-            st.query_params = {"rerun": "1"}  # ✅ Modern rerun
+            st.query_params = {"rerun": "1"}
             st.stop()
         except:
             pass
@@ -180,12 +180,11 @@ else:
     users = load_users("users.json")
     if login_password and verify_password(users.get(person_id, ""), login_password):
         if new_password == renew_password and new_password:
-            tab2.text("Match!")
             if tab2.button('CONFIRM'):
                 users[person_id] = hash_password(new_password)
                 save_users("users.json", users)
                 tab2.success("Password updated successfully!")
         else:
-            tab2.text("New passwords must match")
+            tab2.error("New passwords must match")
     elif login_password:
-        tab2.text("Old password incorrect")
+        tab2.error("Old password incorrect")
